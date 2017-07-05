@@ -32,7 +32,7 @@ cd path_to_glm/release_build/bin
 To benchmark gLM in batch setting do:
 ```bash
 cd path_to_glm/release_build/bin
-./batch_query_v2 path_to_binary_lm path_to_text_file [gpuDeviceID] [add_begin_end_markers]
+./batch_query_v2 path_to_binary_lm_dir path_to_test_file [gpuDeviceID=0] [addBeginEndMarkers_bool=1] //[default setup]
 ```
 This will calculate the perplexity of a text file. If *gpuDeviceID* is set, it will tell the gpu portion of the code to be executed on a particular GPU. You can check the available gpus on a system using the `nvidia_smi` command. 0 is a safe default to have if you want to set it. If *add_begin_end_markers* is set to 0, the begin of sentence and end of sentence tokens (\<s\> and \</s\>) will not surround every sentence.
 
