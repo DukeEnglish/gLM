@@ -105,7 +105,7 @@ inline std::vector<unsigned int> vocabIDsent2queries(std::vector<unsigned int> v
     //In the ret vector put an ngram for every single entry
     while (back_idx < (int)vocabIDs.size()) {
         for (int i = back_idx; i >= front_idx; i--) {
-            ret.push_back(vocabIDs[i]);
+            ret.push_back(vocabIDs[back_idx-i]);
         }
         //Pad with zeroes if we don't have enough
         int zeroes_to_pad = ngram_order - (back_idx - front_idx) - 1;
