@@ -163,7 +163,7 @@ inline processed_line ArpaReader::readline() {
         }
     }
 
-    std::reverse(rettext.ngrams.begin(), rettext.ngrams.end());
+//    std::reverse(rettext.ngrams.begin(), rettext.ngrams.end());
 
     it++; //Go to the next token
 
