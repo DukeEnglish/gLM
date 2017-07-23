@@ -1,7 +1,6 @@
 #include "gpu_search_v2.hh"
 #include "gpu_common.h"
 #include "memory_management.hh"
-#include <stdio.h>
 
 #define big_entry 16
 #define small_entry 8
@@ -65,7 +64,6 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
     //First get the value from first_lvl
     unsigned int current_ngram = 0;
     unsigned int key = keys_shared[current_ngram];
-    int count=0;
 
     /* When using gLM to score ngrams for NMT frequently sentences in batches are padded with zeroes so they can be at the same length
     * the easiest way to get corresponding behaviour is to allow gLM to submit bogus scores (e.g. 0) for them in case the first ngram
@@ -77,24 +75,11 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
         //Backoff logic
         backoff_part2:
         if (get_backoff) {
-            accumulated_score += *backoff;//*prob; //We add the longest match of probability we found.
+            accumulated_score += *prob; //We add the longest match of probability we found.
             match_length_found = current_ngram - 1; //The length of the match found. We need to backoff from toplevel to here
-            current_ngram = 0; //Set backoff in -1. If we run into this case again we need to do nothing
-            key = keys_shared[(max_ngram - match_length_found)];
-            get_backoff = false;
-           // accumulated_score += *backoff; //We add the longest match of probability we found.
-//            match_length_found = current_ngram - 1; //The length of the match found. We need to backoff from toplevel to here
-           // current_ngram = 1; //Set backoff in -1. If we run into this case again we need to do nothing
-           // key = keys_shared[current_ngram];
-	    count++;
-	    printf("count%d\n",count);
-	    printf("accumu%f\n",accumulated_score);
-            printf("max_ngram,%d,match_length_found,%d,substruct,%d\n",max_ngram,match_length_found,max_ngram - match_length_found);
-	    match_length_found = 0;
-	    printf("test_matchlength%d\n",match_length_found);
-	    if (count==5)
-	        printf("tst failed\n");
-            //get_backoff = true;
+            current_ngram = 1; //Set backoff in -1. If we run into this case again we need to do nothing
+            key = keys_shared[current_ngram];
+            get_backoff = true;
         }
         __syncthreads(); //Needed!
         if (i < 3) {
@@ -106,10 +91,7 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
         if (i == 0) {
             if (get_backoff && match_length_found <= current_ngram) {
                 accumulated_score += *backoff;
-            } else if (keys_shared[current_ngram + count + 1] == 0) {
-		printf("come?\n");
-		printf("mid%f\n",*prob);
-		printf("accumu%f\n",accumulated_score);
+            } else if (keys_shared[current_ngram + 1] == 0) {
                 accumulated_score += *prob;
             }
         }
@@ -118,7 +100,7 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
         //Set the start index
         uint64_t current_btree_start = *next_level*4;
         current_ngram++;
-        key = keys_shared[current_ngram + count];
+        key = keys_shared[current_ngram];
 
         //Some necessary variables
         uint64_t updated_idx;
@@ -127,14 +109,12 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
         //Current_btree_start == 0 means that we had UNK key (vocabID 1 which wasn't found, so we should directly go to backoff
         //@TODO we can check if key[0] == 1 when we get the score too
         if (current_btree_start == 0 && key != 0) {
-	    printf("here?\n");
             goto backoff_notriecont;
         }
 
         while ((key != 0 && current_ngram < max_ngram - 1 && current_btree_start != 0) || 
             (get_backoff && key != 0 && current_ngram < max_ngram && current_btree_start != 0)) {
-            if (count==1) {printf("Here is the test of whether in while key!=0");}
-	    current_ngram++;
+            current_ngram++;
             updated_idx = current_btree_start + 4; //Update the index for the while loop
             //@TODO consider this for shared memory as oppposed to global mem broadcast to register
             size = *(unsigned int *)&btree_trie_mem[current_btree_start]; //The size of the current node to process.
@@ -151,7 +131,7 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
                 if (i == 0) {
                     //@TODO: Replace this with a mod check
                     int cur_node_entries = (size - sizeof(unsigned int) - sizeof(unsigned short))/(big_entry + sizeof(unsigned short));
-                    *is_last = !(entries_per_node == cur_node_entries); if (*is_last) {printf("bug here\n");}
+                    *is_last = !(entries_per_node == cur_node_entries);
                 }
                 __syncthreads();
 
@@ -204,19 +184,15 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
                     }
                     __syncthreads();
                 } else if (*is_last && !*exact_match) {
-		    printf("really???\n");
                     //In this case we didn't find the key that we were looking for
                     //What we should do is get the probability of the last node that we found
                     //The last node that we found's probability should be in shared memory
                     backoff_notriecont:
-		    printf("really come here directly?\n");
                     if (get_backoff) {
-			printf("double check208\n");
                         current_ngram = max_ngram;
                         break; //If we didn't find a backoff, the value is zero; //We should go to end now, because any further backoffs
                         // will be missing from the trie
                     } else {
-			printf("triple kill213\n");
                         get_backoff = true;
                         __syncthreads(); //Necessary
                         goto backoff_part2;
@@ -238,7 +214,7 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
                         }
                     }
 
-                    key = keys_shared[count+current_ngram]; //@TODO this might be illegal memory access
+                    key = keys_shared[current_ngram]; //@TODO this might be illegal memory access
                     __syncthreads();
 
                     current_btree_start = current_btree_start + *next_level*4;
@@ -247,7 +223,6 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
                     //we will have tries that don't go to the last level. In this case
                     //we just need to initiate backoff
                     if (*next_level == 0 && key != 0) {
-			printf("257test");
                         current_ngram++; //We need to add one to the current_ngram because we actually found a match on this trie level
                         goto backoff_notriecont; //it's the next trie level we are missing so in effect we say that this is the longest
                     }                            //match and we need to calculate the backoff for the rest, similar to the case in the last_level
@@ -336,7 +311,6 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
                     }
                     __syncthreads();
                 } else if (!*exact_match && is_last) {
-		    printf("300+");
                     current_ngram++; //This is necessary so that longest match logic is kept correct since in the while loop we
                     goto backoff_notriecont; //Increment this before actually finding the next level
                 } else {
@@ -361,7 +335,6 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
     //Write the correct result at the end
     if (i == 0) {
         fn(accumulated_score); //This is basically either identity or exp, depending on what we need
-//	accumulated_score=0;
         results[blockIdx.x] = accumulated_score;
     }
 }
