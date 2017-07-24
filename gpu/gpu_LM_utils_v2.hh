@@ -95,6 +95,16 @@ inline std::vector<unsigned int> sent2vocabIDs(LM &lm, std::vector<std::string> 
 
     return ret;
 }
+//fetch all words vacabIDs
+inline std::vector<unsigned int> allwords(LM &lm) {
+    std::vector<unsigned int> ret;
+    for (std::unordered_map<std::string, unsigned int>::iterator iter = lm.encode_map.begin(); iter != lm.encode_ma
+p.end(); iter++  )
+    {
+        ret.push_back(iter->second);
+    }
+    return ret;
+}
 
 inline std::vector<unsigned int> vocabIDsent2queries(std::vector<unsigned int> vocabIDs, unsigned short ngram_order) {
     std::vector<unsigned int> ret;
