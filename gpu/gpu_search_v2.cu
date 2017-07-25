@@ -108,6 +108,8 @@ printf ("%d\n",keys_shared[4]);*/
 
         //Set the start index
         uint64_t current_btree_start = *next_level*4;
+		printf("111testcurrent_btree_start%d\n",current_btree_start);
+		btree_start = current_btree_start;
         current_ngram++;
         key = keys_shared[current_ngram];
 
@@ -124,10 +126,12 @@ printf ("%d\n",keys_shared[4]);*/
         while ((key != 0 && current_ngram < max_ngram - 1 && current_btree_start != 0) || 
             (get_backoff && key != 0 && current_ngram < max_ngram && current_btree_start != 0)) {
             current_ngram++;
+			printf("current_ngram%d\n",current_ngram);
             updated_idx = current_btree_start + 4; //Update the index for the while loop
+			printf("testcurrentstartsame129 is %d\n",current_btree_start);
             //@TODO consider this for shared memory as oppposed to global mem broadcast to register
             size = *(unsigned int *)&btree_trie_mem[current_btree_start]; //The size of the current node to process.
-
+			printf("46288sizeis %d\n",size);
             //Initialize shared variable
             if (i < 2) {
                 booleans[i] = false; //Uset *exact_match and *is_last
@@ -148,7 +152,7 @@ printf ("%d\n",keys_shared[4]);*/
                 if (*is_last) {
                     //The number of entries in the bottom most nodes may be smaller than the size
                     num_entries = size/big_entry;
-					printf("num_entries%d\n",num_entries);
+					printf("heis152num_entries%d\n",num_entries);
                     if (i < num_entries) {
                         entries[i] = *(unsigned int *)(&btree_trie_mem[updated_idx + i*sizeof(unsigned int)]);
                     }
@@ -228,7 +232,11 @@ printf ("%d\n",keys_shared[4]);*/
                     __syncthreads();
 
                     current_btree_start = current_btree_start + *next_level*4;
-
+					btree_start = current_btree_start;//+ *next_level*4;
+					printf("234current_btree_start%d\n",current_btree_start);
+					printf("235btree_start%d\n",btree_start);
+                    if (current_btree_start == btree_start){printf("testcurrent344%d,%d\n",btree_start,current_btree_start);
+}
                     //Very rarely, mostly when having big datasets with small vocabulary
                     //we will have tries that don't go to the last level. In this case
                     //we just need to initiate backoff
@@ -253,6 +261,7 @@ printf ("%d\n",keys_shared[4]);*/
         //Now fetch the last level if the key is not 0 or we backed off
         //key = keys_shared[current_ngram]; We already set the next key
         if (!get_backoff && key != 0) {
+			printf(">?????");
             updated_idx = current_btree_start + 4; //Update the index for the while loop
             //@TODO consider this for shared memory as oppposed to global mem broadcast to register
             size = *(unsigned int *)&btree_trie_mem[current_btree_start]; //The size of the current node to process.
@@ -326,28 +335,31 @@ printf ("%d\n",keys_shared[4]);*/
                     goto backoff_notriecont; //Increment this before actually finding the next level
                 } else {
                     // We have an exact match, so we just need to add it to the payload and be done with it
-                    if (i == 0) {
-                        //What we are doing here is reading the correct memory location for our payload. The payload is found
-                        //After the offsets and the keys, so we skip them and then we skip to the correct payload using found_idx
-                        if (*is_last) {
-                            accumulated_score += *(float *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
-                                + found_idx*(sizeof(float))]); //Skip the previous keys' payload
+                    if (i == 3) {
+						if (*is_last) {
+                            payload[i] = *(unsigned int *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
+                                + found_idx*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) //Skip the previous keys' payload
+                                    + i*sizeof(unsigned int)]); //Get next_level/prob/backoff
                         } else {
-                            accumulated_score += *(float *)(&btree_trie_mem[updated_idx + sizeof(unsigned int) + max_num_children*sizeof(unsigned short) //Skip the offsets and first offset
+                            payload[i] = *(unsigned int *)(&btree_trie_mem[updated_idx + sizeof(unsigned int) + max_num_children*sizeof(unsigned short) //Skip the offsets and first offset
                                 + num_entries*sizeof(unsigned int) //Skip the keys
-                                    + found_idx*(sizeof(float))]); //Skip the previous keys' payload
+                                    + found_idx*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) //Skip the previous keys' payload
+                                        + i*sizeof(unsigned int)]);  //Get next_level/prob/backoff
                         }
                     }
 					key = keys_shared[current_ngram+1];
 					__syncthreads();
                     btree_start = current_btree_start + *next_level*4;
+				//	printf("testcurrent344%d",current_btree_start);
                 }
             }
         }
 
     } //key != 0
+
+	printf("LgLMbegincurrent_ngramtest%d",current_ngram);//if it is already max_ngram I have to change the way to calculate num_entries and the way to get prob etc, but others should be the same because the last one is different from the previous (no children this is the ngram level not a Btree[eg:ngram A,B,C,D,E for E it has no children so it is different to get data for  E from C, but E still has so many vocabs can be])
 	unsigned int fetch_entries[entries_per_node+1];
-	float score[entries_per_node + 1];
+	float  score[entries_per_node + 1];
 unsigned int next_address[entries_per_node +1];
 //printf ("key is %d\n",key);
 //printf ("%d\n",keys_shared[0]);
@@ -355,9 +367,10 @@ unsigned int next_address[entries_per_node +1];
 //printf ("%d\n",keys_shared[2]);
 //printf ("%d\n",keys_shared[3]);
 //printf ("%d\n",current_ngram);
-if (key == 0){
+if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to change to a new way
 	printf("try tmw");
-    btree_start = btree_start + *next_level*4;
+    //btree_start = btree_start + *next_level*4;
+	printf("start%d\n",btree_start);
     updated_index = btree_start + 4;
     btree_size = *(unsigned int *)&btree_trie_mem[btree_start];
     if (i < 2) {
@@ -365,34 +378,41 @@ if (key == 0){
     }
     __syncthreads();
     if (i == 0){
-        int cur_node_entries = (btree_size - sizeof(unsigned int) - sizeof(unsigned short))/(small_entry + sizeof(unsigned short));
+        int cur_node_entries = (btree_size - sizeof(unsigned int) - sizeof(unsigned short))/(big_entry + sizeof(unsigned short));
         *is_last = !(entries_per_node == cur_node_entries);
     }
     __syncthreads();
     int num_entries; //Set the number of entries per node depending on whether we are internal or leaf.
     if (*is_last) {
     //The number of entries in the bottom most nodes may be smaller than the size
-        num_entries = btree_size/small_entry;
+        num_entries = btree_size/big_entry;
+		printf("num_entries%d\n",num_entries);
         if (i < num_entries) {// all the three entries are found but the score is wrong
             fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
-            score[i]= *(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) //Skip the keys
-                                + i*(sizeof(float))]); 
-			printf("testscore%d,%f\n",i,score[i]);
+			printf("testprob%f\n",*prob);
+			unsigned int tmp;
+            tmp=(*(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float))  + sizeof(unsigned int)])); 
+//*(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(float))]); 
+			float *tmp_prob=(float *)&tmp;
+			printf("testscore%d,%f\n",i,*tmp_prob);
 			printf("testentries%d,%d\n",i,fetch_entries[i]);
         }
     } else {
         num_entries = entries_per_node;
+		printf("num_entriesfornolast%d\n",num_entries);
          //Now load the entries
         if (i < num_entries) {
+				unsigned int tmp;
                 fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
-                score[i] = *(float *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short) //Skip the offsets and first offset
-                                + num_entries*sizeof(unsigned int) //Skip the keys
-                                + i*(sizeof(float))]);
-                next_address[i] = *(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short) //Skip the offsets and first offset
-                                + num_entries*sizeof(unsigned int) //Skip the keys
-                                + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float))]); 
-//Skip the previous keys' payload
-				printf("testscoreelae,%f\n",score[i]);
+				
+                //score[i] =*(float *)&(*(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float))  + *sizeof(unsigned int)])); 
+//*(float *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short) //Skip the offsets and first offset
+//                                + num_entries*sizeof(unsigned int) //Skip the keys
+  //                              + i*(sizeof(float))]);
+                next_address[i] = *(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 0*sizeof(unsigned int)]); 
+				tmp=*(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 1*sizeof(unsigned int)]);  
+				float *tmp_prob=(float *)&tmp;
+				printf("testscoreelae,%d,%f\n",i,*tmp_prob);
 	            printf("testentrieelse,%d\n",fetch_entries[i]);
 				printf("testaddresselse,%d\n",next_address[i]);
             }
@@ -400,6 +420,8 @@ if (key == 0){
                 offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
             }
         }
+//		__syncthreads();
+//	    traversal(fetch_btree_start[i], max_num_children, entries_per_node, max_ngram, btree_trie_mem, results);
     }
     printf("test-----------------\n");
 	
