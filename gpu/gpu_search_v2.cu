@@ -242,7 +242,7 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
         }
         //Now fetch the last level if the key is not 0 or we backed off
         //key = keys_shared[current_ngram]; We already set the next key
-        if (!get_backoff && key != 0) {
+        if (!get_backoff && key != 0) {//因为最后一个没有子节点了已经是最长的ngram了，所以大小就变掉了。但是和我没有什么关系麽？有的，我也需要选，看是不是最后一个。
             updated_idx = current_btree_start + 4; //Update the index for the while loop
             //@TODO consider this for shared memory as oppposed to global mem broadcast to register
             size = *(unsigned int *)&btree_trie_mem[current_btree_start]; //The size of the current node to process.
