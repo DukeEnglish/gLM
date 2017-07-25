@@ -357,7 +357,7 @@ unsigned int next_address[entries_per_node +1];
 //printf ("%d\n",current_ngram);
 if (key == 0){
 	printf("try tmw");
-    btree_start = btree_start + *next_level*4;
+    //btree_start = btree_start + *next_level*4;
     updated_index = btree_start + 4;
     btree_size = *(unsigned int *)&btree_trie_mem[btree_start];
     if (i < 2) {
