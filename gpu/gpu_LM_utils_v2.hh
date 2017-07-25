@@ -96,12 +96,29 @@ inline std::vector<unsigned int> sent2vocabIDs(LM &lm, std::vector<std::string> 
     return ret;
 }
 
+inline std::vector<unsigned int> allwords (LM &lm) {
+    std::vector<unsigned int> ret;
+    for (std::unordered_map<std::string, unsigned int>::iterator iter = lm.encode_map.begin(); iter != lm.encode_map.end(); iter++  )
+    {
+        ret.push_back(iter->second);
+    }
+    return ret;
+}
+
 inline std::vector<unsigned int> vocabIDsent2queries(std::vector<unsigned int> vocabIDs, unsigned short ngram_order) {
     std::vector<unsigned int> ret;
     ret.reserve((vocabIDs.size() - 1)*ngram_order);
     int front_idx = 0;
     int back_idx = 1;
-
+	
+	for (int i = 0; i < (int)vocabIDs.size(); i++) {
+            ret.push_back(vocabIDs[i]);
+        }
+    int zeroes_to_pad = ngram_order - (int)vocabIDs.size();
+        for (int i = 0; i < zeroes_to_pad; i++) {
+            ret.push_back(0);
+        }
+	/*
     //In the ret vector put an ngram for every single entry
     while (back_idx < (int)vocabIDs.size()) {
         for (int i = back_idx; i >= front_idx; i--) {
@@ -120,7 +137,7 @@ inline std::vector<unsigned int> vocabIDsent2queries(std::vector<unsigned int> v
             front_idx++;
             back_idx++;
         }
-    }
+    }*/
 
     return ret;
 }

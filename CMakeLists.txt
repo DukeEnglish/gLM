@@ -3,7 +3,7 @@ project (gLM C CXX)
 
 set(DEBUGBUILD 0)
 set(BAD_HOST_FLAGS 0)
-set(GPU_COMPUTE_VER 52)
+set(GPU_COMPUTE_VER 37)
 set(PYTHON_VER_FLAG 2.7)
 
 #Fix GPU compilation on bad ubuntu systems

@@ -64,12 +64,21 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
     //First get the value from first_lvl
     unsigned int current_ngram = 0;
     unsigned int key = keys_shared[current_ngram];
-
+	
+	uint64_t btree_start;
+    uint64_t updated_index;
+    unsigned int btree_size;
     /* When using gLM to score ngrams for NMT frequently sentences in batches are padded with zeroes so they can be at the same length
     * the easiest way to get corresponding behaviour is to allow gLM to submit bogus scores (e.g. 0) for them in case the first ngram
     * in the query is zero. Hence this ugly goto which will bypass the btree code. Unfortunately we pay for this with about 0.001% drop
     * in throughput ;/
-    */
+    *//*
+	printf("Test the content in key ------------------\n");
+	printf ("%d\n",keys_shared[0]);
+	printf ("%d\n",keys_shared[1]);
+	printf ("%d\n",keys_shared[2]);
+printf ("%d\n",keys_shared[3]);
+printf ("%d\n",keys_shared[4]);*/
     if (key != 0) {
 
         //Backoff logic
@@ -139,6 +148,7 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
                 if (*is_last) {
                     //The number of entries in the bottom most nodes may be smaller than the size
                     num_entries = size/big_entry;
+					printf("num_entries%d\n",num_entries);
                     if (i < num_entries) {
                         entries[i] = *(unsigned int *)(&btree_trie_mem[updated_idx + i*sizeof(unsigned int)]);
                     }
@@ -267,7 +277,8 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
                 if (*is_last) {
                     //The number of entries in the bottom most nodes may be smaller than the size
                     num_entries = size/small_entry;
-                    if (i < num_entries) {
+                    printf("num_entries279%d\n",num_entries);
+					if (i < num_entries) {
                         entries[i] = *(unsigned int *)(&btree_trie_mem[updated_idx + i*sizeof(unsigned int)]);
                     }
                 } else {
@@ -327,11 +338,71 @@ __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * fi
                                     + found_idx*(sizeof(float))]); //Skip the previous keys' payload
                         }
                     }
+					key = keys_shared[current_ngram+1];
+					__syncthreads();
+                    btree_start = current_btree_start + *next_level*4;
                 }
             }
         }
 
     } //key != 0
+	unsigned int fetch_entries[entries_per_node+1];
+	float score[entries_per_node + 1];
+unsigned int next_address[entries_per_node +1];
+//printf ("key is %d\n",key);
+//printf ("%d\n",keys_shared[0]);
+//printf ("%d\n",keys_shared[1]);
+//printf ("%d\n",keys_shared[2]);
+//printf ("%d\n",keys_shared[3]);
+//printf ("%d\n",current_ngram);
+if (key == 0){
+	printf("try tmw");
+    btree_start = btree_start + *next_level*4;
+    updated_index = btree_start + 4;
+    btree_size = *(unsigned int *)&btree_trie_mem[btree_start];
+    if (i < 2) {
+        booleans[i] = false;
+    }
+    __syncthreads();
+    if (i == 0){
+        int cur_node_entries = (btree_size - sizeof(unsigned int) - sizeof(unsigned short))/(small_entry + sizeof(unsigned short));
+        *is_last = !(entries_per_node == cur_node_entries);
+    }
+    __syncthreads();
+    int num_entries; //Set the number of entries per node depending on whether we are internal or leaf.
+    if (*is_last) {
+    //The number of entries in the bottom most nodes may be smaller than the size
+        num_entries = btree_size/small_entry;
+        if (i < num_entries) {// all the three entries are found but the score is wrong
+            fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
+            score[i]= *(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) //Skip the keys
+                                + i*(sizeof(float))]); 
+			printf("testscore%d,%f\n",i,score[i]);
+			printf("testentries%d,%d\n",i,fetch_entries[i]);
+        }
+    } else {
+        num_entries = entries_per_node;
+         //Now load the entries
+        if (i < num_entries) {
+                fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
+                score[i] = *(float *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short) //Skip the offsets and first offset
+                                + num_entries*sizeof(unsigned int) //Skip the keys
+                                + i*(sizeof(float))]);
+                next_address[i] = *(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short) //Skip the offsets and first offset
+                                + num_entries*sizeof(unsigned int) //Skip the keys
+                                + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float))]); 
+//Skip the previous keys' payload
+				printf("testscoreelae,%f\n",score[i]);
+	            printf("testentrieelse,%d\n",fetch_entries[i]);
+				printf("testaddresselse,%d\n",next_address[i]);
+            }
+            if (i < (max_num_children/2) + 1) {
+                offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
+            }
+        }
+    }
+    printf("test-----------------\n");
+	
     //Write the correct result at the end
     if (i == 0) {
         fn(accumulated_score); //This is basically either identity or exp, depending on what we need
