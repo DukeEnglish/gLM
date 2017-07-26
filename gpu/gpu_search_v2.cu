@@ -17,7 +17,66 @@ struct exponentify {
     }
 };
 
+template<unsigned int max_num_children, unsigned int entries_per_node, unsigned int max_ngram>
+__device__ void traversal (int count, int track, uint64_t updated_index, unsigned int size, unsigned char * btree_trie_mem, float * results) {
+printf("This is %d traversal for %d time \n",track, count);
+count++;
+    unsigned int offsets[max_num_children/2 +1];
+    unsigned short * offests_incremental = (unsigned short *)&offsets[1];
+    unsigned int * first_child_offset = &offsets[0];
+    unsigned int fetch_entries[entries_per_node+1];
+    bool is_last_lvl=false;
+    int cur_node_entries = (size - sizeof(unsigned int) - sizeof(unsigned short))/(big_entry + sizeof(unsigned short));
+    is_last_lvl = !(entries_per_node == cur_node_entries);
+	
+    uint64_t sub_idx[entries_per_node];
+    unsigned int sub_size[entries_per_node];
+	
+    if (is_last_lvl) {
+		printf("if it is last\n");
+        int num_entries = size/big_entry; 
+		printf("num_entries%dtrack is %d\n",num_entries,track);
+        for (int i = 0; i < num_entries ; i++) {
+            fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);    
+            //printf("testprob%f\n",*prob);
+            unsigned int tmp;
+            tmp=(*(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float))  + sizeof(unsigned int)])); 
+//*(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(float))]);          
+            float *tmp_prob=(float *)&tmp;
+            printf("testscore%d,%f\n",i,*tmp_prob);
+            printf("testentries%d,%d\n",i,fetch_entries[i]);
+    }
+} else {
+        int num_entries = entries_per_node;
+        for (int i = 0; i < entries_per_node ; i++) {
+            unsigned int tmp;
+            fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
+            tmp=*(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 1*sizeof(unsigned int)]);
+            float *tmp_prob=(float *)&tmp;
+			printf("track is %d\n",track);
+            printf("testscoreelae,%d,%f\n",i,*tmp_prob);
+            printf("testentrieelse,%d\n",fetch_entries[i]);
 
+            if (i < (max_num_children/2) + 1) {
+                offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
+            }
+    //        uint64_t sub_idx[entries_per_node];
+      //      unsigned int sub_size[entries_per_node];
+            sub_idx[0]=updated_index + *first_child_offset*4;
+            if (i == 0) { 
+            sub_size[i] = offests_incremental[0]*4; //0 being found_idx but a bit faster cause we hardcode it 
+            } else {
+            sub_idx[i]=sub_idx[0] + offests_incremental[i - 1]*4;
+            sub_size[i] = (offests_incremental[i] - offests_incremental[i - 1])*4;
+            }
+			
+            printf("test sub_idx[%d] is %d, and associated offests_incrementa%d[i] is %d\n",i,sub_idx[i],i,offests_incremental[i]);   
+			//if (i < (max_num_children/2) +1){
+            traversal<max_num_children, entries_per_node, max_ngram>(count, track, sub_idx[i],sub_size[i], btree_trie_mem, results);
+        
+    }
+}
+}
 template<unsigned int max_num_children, unsigned int entries_per_node, unsigned int max_ngram, class Functor>
 __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys, float * results, Functor fn) {
 
@@ -193,6 +252,7 @@ printf ("%d\n",keys_shared[4]);*/
                     if (found_idx == 0) {
                        size = offests_incremental[0]*4; //0 being found_idx but a bit faster cause we hardcode it
                     } else {
+						//printf("249could i > 4%d",offests_incremental[6]);
                         updated_idx += offests_incremental[found_idx - 1]*4;
                         size = (offests_incremental[found_idx] - offests_incremental[found_idx - 1])*4;
                     }
@@ -368,8 +428,8 @@ unsigned int next_address[entries_per_node +1];
 //printf ("%d\n",keys_shared[3]);
 //printf ("%d\n",current_ngram);
 if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to change to a new way
-	printf("try tmw");
-    //btree_start = btree_start + *next_level*4;
+	uint64_t sub_idx[entries_per_node];
+    unsigned int sub_size[entries_per_node];
 	printf("start%d\n",btree_start);
     updated_index = btree_start + 4;
     btree_size = *(unsigned int *)&btree_trie_mem[btree_start];
@@ -386,10 +446,8 @@ if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to cha
     if (*is_last) {
     //The number of entries in the bottom most nodes may be smaller than the size
         num_entries = btree_size/big_entry;
-		printf("num_entries%d\n",num_entries);
         if (i < num_entries) {// all the three entries are found but the score is wrong
             fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
-			printf("testprob%f\n",*prob);
 			unsigned int tmp;
             tmp=(*(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float))  + sizeof(unsigned int)])); 
 //*(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(float))]); 
@@ -398,29 +456,52 @@ if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to cha
 			printf("testentries%d,%d\n",i,fetch_entries[i]);
         }
     } else {
+	//	printf("test 7 is %d\n",*(unsigned int *)(&btree_trie_mem[updated_index + 7*sizeof(unsigned int)])); after test 7 is not the child of <s>
         num_entries = entries_per_node;
-		printf("num_entriesfornolast%d\n",num_entries);
+		printf("begin the no last travel and num_entries is %d\n",num_entries);
          //Now load the entries
         if (i < num_entries) {
 				unsigned int tmp;
                 fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
 				
-                //score[i] =*(float *)&(*(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float))  + *sizeof(unsigned int)])); 
-//*(float *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short) //Skip the offsets and first offset
-//                                + num_entries*sizeof(unsigned int) //Skip the keys
-  //                              + i*(sizeof(float))]);
-                next_address[i] = *(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 0*sizeof(unsigned int)]); 
+            //    next_address[i] = *(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 0*sizeof(unsigned int)]); 
 				tmp=*(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 1*sizeof(unsigned int)]);  
 				float *tmp_prob=(float *)&tmp;
 				printf("testscoreelae,%d,%f\n",i,*tmp_prob);
 	            printf("testentrieelse,%d\n",fetch_entries[i]);
-				printf("testaddresselse,%d\n",next_address[i]);
+			//	printf("testaddresselse,%d\n",next_address[i]);
             }
-            if (i < (max_num_children/2) + 1) {
-                offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
-            }
+        if (i < (max_num_children/2) + 1) {
+            offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
+			printf("offsets size is:%d,thread is %d,  content is %d\n",(sizeof(offsets)/sizeof(offsets[0])),i, offsets[i]);
         }
-//		__syncthreads();
+			//uint64_t sub_idx[num_entries];
+            //unsigned int sub_size[num_entries];
+/*
+            sub_idx[0]=updated_index + *first_child_offset*4;
+			printf("sub_idx[0] is %d\n",sub_idx[0]);
+            if (i == 0) {
+            sub_size[i] = offests_incremental[0]*4; //0 being found_idx but a bit faster cause we hardcode it
+            } else {
+            sub_idx[i]=sub_idx[0] + offests_incremental[i - 1]*4;
+            sub_size[i] = (offests_incremental[i] - offests_incremental[i - 1])*4;
+			printf("test sub_idx[%d] is %d, and associated offests_incremental[%d] is %d\n",i,sub_idx[i],i,offests_incremental[i]);
+            } */
+			
+        }
+		__syncthreads();
+		sub_idx[0]=updated_index + *first_child_offset*4;
+        printf("sub_idx[0] is %d\n",sub_idx[0]);
+        if (i == 0) {
+        sub_size[i] = offests_incremental[0]*4; //0 being found_idx but a bit faster cause we hardcode i
+        } else {
+        sub_idx[i]=sub_idx[0] + offests_incremental[i - 1]*4;
+		printf("sub_idx[1] is %d\n",sub_idx[1]);
+        sub_size[i] = (offests_incremental[i] - offests_incremental[i - 1])*4;
+        printf("test sub_idx[%d] is %d, and associated offests_incremental[%d] is %d\n",i,sub_idx[i],i,offests_incremental[i]);
+		}
+		__syncthreads();
+		traversal<max_num_children,entries_per_node,max_ngram>(1, i, sub_idx[i],sub_size[i], btree_trie_mem, results);
 //	    traversal(fetch_btree_start[i], max_num_children, entries_per_node, max_ngram, btree_trie_mem, results);
     }
     printf("test-----------------\n");
@@ -431,6 +512,7 @@ if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to cha
         results[blockIdx.x] = accumulated_score;
     }
 }
+
 
 /*
     We have to do this to provide some degree of flexibility, whilst maintaining performance
