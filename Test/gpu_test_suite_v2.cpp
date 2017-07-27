@@ -38,9 +38,9 @@
 
     freeGPUMemory(gpuKeys);
     freeGPUMemory(results);
-	for (int i =1;i<results_size;i++){
-		printf("results[%d]: %f\n",i,results_cpu[i]);
-	}	
+//	for (int i =1;i<results_size;i++){
+//		printf("results[%d]: %f\n",i,results_cpu[i]);
+//	}	
 
     return results_cpu;
 }
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(micro_LM_test_small)  {
 
     //Test if we have full queries and backoff working correctly with our toy dataset
     //The values that we have are tested against KenLM and we definitely get the same
-    std::string sentence1 = "<s>"; //Sentence with no backoff
+    std::string sentence1 = "<s> he </s>";//"<s> he"; //Sentence with no backoff
 
     float expected1[3] = {-3.08719, -2.61558, -2.49612};
     //Query on the GPU

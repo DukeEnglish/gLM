@@ -158,6 +158,7 @@ printf ("%d\n",keys_shared[4]);*/
             current_ngram = 1; //Set backoff in -1. If we run into this case again we need to do nothing
             key = keys_shared[current_ngram];
             get_backoff = true;
+			goto over;
         }
         __syncthreads(); //Needed!
         if (i < 3) {
@@ -177,7 +178,6 @@ printf ("%d\n",keys_shared[4]);*/
 
         //Set the start index
         uint64_t current_btree_start = *next_level*4;
-		printf("111testcurrent_btree_start%d\n",current_btree_start);
 		btree_start = current_btree_start;
         current_ngram++;
         key = keys_shared[current_ngram];
@@ -195,12 +195,9 @@ printf ("%d\n",keys_shared[4]);*/
         while ((key != 0 && current_ngram < max_ngram - 1 && current_btree_start != 0) || 
             (get_backoff && key != 0 && current_ngram < max_ngram && current_btree_start != 0)) {
             current_ngram++;
-			printf("current_ngram%d\n",current_ngram);
             updated_idx = current_btree_start + 4; //Update the index for the while loop
-			printf("testcurrentstartsame129 is %d\n",current_btree_start);
             //@TODO consider this for shared memory as oppposed to global mem broadcast to register
             size = *(unsigned int *)&btree_trie_mem[current_btree_start]; //The size of the current node to process.
-			printf("46288sizeis %d\n",size);
             //Initialize shared variable
             if (i < 2) {
                 booleans[i] = false; //Uset *exact_match and *is_last
@@ -333,7 +330,6 @@ printf ("%d\n",keys_shared[4]);*/
         //Now fetch the last level if the key is not 0 or we backed off
         //key = keys_shared[current_ngram]; We already set the next key
         if (!get_backoff && key != 0) {
-			printf(">?????");
             updated_idx = current_btree_start + 4; //Update the index for the while loop
             //@TODO consider this for shared memory as oppposed to global mem broadcast to register
             size = *(unsigned int *)&btree_trie_mem[current_btree_start]; //The size of the current node to process.
@@ -439,7 +435,7 @@ printf ("%d\n",keys_shared[4]);*/
 //printf ("%d\n",keys_shared[2]);
 //printf ("%d\n",keys_shared[3]);
 //printf ("%d\n",current_ngram);
-if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to change to a new way
+if (key == 0 && current_ngram <max_ngram-1 && !get_backoff && btree_start!=0){//if it is =max_ngram then I have to change to a new way
 	uint64_t sub_idx[entries_per_node];
     unsigned int sub_size[entries_per_node];
     updated_index = btree_start + 4;
@@ -519,7 +515,9 @@ if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to cha
 	__syncthreads();
 	
     //Write the correct result at the end
+	over:
     if (i == 0) {
+		printf("\nit'ss over\n");
         fn(accumulated_score); //This is basically either identity or exp, depending on what we need
         //results[blockIdx.x] = accumulated_score;
     }
