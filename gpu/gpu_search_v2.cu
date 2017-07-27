@@ -86,6 +86,72 @@ printf("This is thread %d's traversal for %d time \n",track, count);
     }
 }
 
+template<unsigned int max_num_children, unsigned int entries_per_node, unsigned int max_ngram>
+__device__ void traversal_last_ngram (int count, int track, uint64_t updated_index, unsigned int size, unsigned char * btree_trie_mem, float * results) {
+printf("This is thread %d's traversal for %d time \n",track, count);
+    count++;
+    unsigned int offsets[max_num_children/2 +1];
+    unsigned short * offests_incremental = (unsigned short *)&offsets[1];
+    unsigned int * first_child_offset = &offsets[0];
+    unsigned int fetch_entries[entries_per_node+1];
+    bool is_last_lvl=false;
+
+    int cur_node_entries = (size - sizeof(unsigned int) - sizeof(unsigned short))/(small_entry + sizeof(unsigned short));
+    is_last_lvl = !(entries_per_node == cur_node_entries);
+    
+    uint64_t sub_idx[entries_per_node];
+    unsigned int sub_size[entries_per_node];
+    
+    if (is_last_lvl) {
+        int num_entries = size/small_entry; 
+        printf("is_last_lvl: num_entries%d; track is %d\n",num_entries,track);
+        for (int i = 0; i < num_entries ; i++) {
+			fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
+			float tmp;
+            tmp =  *(float *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
+            printf("traversal, thread is %d, loop is , prob is%f\n",track, i,tmp);
+            printf("entries associated with above line%d,%d\n",i,fetch_entries[i]);
+			results[fetch_entries[i]]=tmp;
+    }
+} else {
+        int num_entries = entries_per_node;
+        for (int i = 0; i < entries_per_node ; i++) {
+           
+            fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
+            float tmp;
+            tmp =  *(float *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
+            printf("no last traversal thread is %d\n",track);
+            printf("loop is ,%d, prob is %f\n",i,tmp);
+            printf("entries associated with above line:%d\n",fetch_entries[i]);
+			results[fetch_entries[i]]=tmp;
+
+            if (i < (max_num_children/2) + 1) {
+                offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
+				unsigned int test = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + 1*sizeof(unsigned int)]);
+				printf("test %d\n",test);
+				printf("thread :%d - offsets[%d] is %d: \n",track, i, offsets[i]);
+            }
+        }
+        for(int i = 0; i < max_num_children ; i++) {
+    //        uint64_t sub_idx[entries_per_node];
+      //      unsigned int sub_size[entries_per_node];
+            sub_idx[0]=updated_index + *first_child_offset*4;
+            if (i == 0) { 
+            sub_size[i] = offests_incremental[0]*4; //0 being found_idx but a bit faster cause we hardcode it 
+            } else {
+            sub_idx[i]=sub_idx[0] + offests_incremental[i - 1]*4;
+            sub_size[i] = (offests_incremental[i] - offests_incremental[i - 1])*4;
+            }
+            
+            
+            if (sub_size[i]!=0){
+			printf("also begin ith traversal. test sub_size[%d] is %d\n",i, sub_size[i]);
+            traversal<max_num_children, entries_per_node, max_ngram>(count, track, sub_idx[i],sub_size[i], btree_trie_mem, results);
+            }
+        }
+    }
+}
+
 
 template<unsigned int max_num_children, unsigned int entries_per_node, unsigned int max_ngram, class Functor>
 __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys, float * results, Functor fn) {
@@ -425,16 +491,9 @@ printf ("%d\n",keys_shared[4]);*/
 
     } //key != 0
 
-	printf("LgLMbegincurrent_ngramtest%d",current_ngram);//if it is already max_ngram I have to change the way to calculate num_entries and the way to get prob etc, but others should be the same because the last one is different from the previous (no children this is the ngram level not a Btree[eg:ngram A,B,C,D,E for E it has no children so it is different to get data for  E from C, but E still has so many vocabs can be])
+	printf("not last ngram: %d\n",current_ngram);//if it is already max_ngram I have to change the way to calculate num_entries and the way to get prob etc, but others should be the same because the last one is different from the previous (no children this is the ngram level not a Btree[eg:ngram A,B,C,D,E for E it has no children so it is different to get data for  E from C, but E still has so many vocabs can be])
 	unsigned int fetch_entries[entries_per_node+1];
-//	float  score[entries_per_node + 1];
-//unsigned int next_address[entries_per_node +1];
-//printf ("key is %d\n",key);
-//printf ("%d\n",keys_shared[0]);
-//printf ("%d\n",keys_shared[1]);
-//printf ("%d\n",keys_shared[2]);
-//printf ("%d\n",keys_shared[3]);
-//printf ("%d\n",current_ngram);
+
 if (key == 0 && current_ngram <max_ngram-1 && !get_backoff && btree_start!=0){//if it is =max_ngram then I have to change to a new way
 	uint64_t sub_idx[entries_per_node];
     unsigned int sub_size[entries_per_node];
@@ -513,6 +572,73 @@ if (key == 0 && current_ngram <max_ngram-1 && !get_backoff && btree_start!=0){//
 //	    traversal(fetch_btree_start[i], max_num_children, entries_per_node, max_ngram, btree_trie_mem, results);
     }
 	__syncthreads();
+	
+	printf("is last ngram: %d\n",current_ngram);
+if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){//if it is =max_ngram then I have to change to a new way
+    uint64_t sub_idx[entries_per_node];
+    unsigned int sub_size[entries_per_node];
+    updated_index = btree_start + 4;
+    btree_size = *(unsigned int *)&btree_trie_mem[btree_start];
+    if (i < 2) {
+        booleans[i] = false;
+    }
+    __syncthreads();
+    if (i == 0){
+        int cur_node_entries = (btree_size - sizeof(unsigned int) - sizeof(unsigned short))/(small_entry + sizeof(unsigned short));
+        *is_last = !(entries_per_node == cur_node_entries);
+    }
+    __syncthreads();
+    int num_entries; //Set the number of entries per node depending on whether we are internal or leaf.
+    if (*is_last) {
+    //The number of entries in the bottom most nodes may be smaller than the size
+        num_entries = btree_size/small_entry;
+        if (i < num_entries) {// all the three entries are found but the score is wrong
+            fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
+			float tmp;
+            tmp =  *(float *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
+                                + i*(sizeof(float))]);
+			printf("testscore%d,%f\n",i,tmp);
+			printf("testentries%d,%d\n",i,fetch_entries[i]);
+			results[fetch_entries[i]]=tmp;
+        }
+    } else {
+	//	printf("test 7 is %d\n",*(unsigned int *)(&btree_trie_mem[updated_index + 7*sizeof(unsigned int)])); after test 7 is not the child of <s>
+        num_entries = entries_per_node;
+		printf("begin the no last travel and num_entries is %d\n",num_entries);
+         //Now load the entries
+        if (i < num_entries) {
+				float tmp;
+                fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
+				
+            //    next_address[i] = *(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 0*sizeof(unsigned int)]); 
+				tmp=*(float *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
+                                + i*(sizeof(float))]);
+				printf("testscoreelae,%d,%f\n",i,tmp);
+	            printf("testentrieelse,%d\n",fetch_entries[i]);
+				results[fetch_entries[i]]=tmp;
+			//	printf("testaddresselse,%d\n",next_address[i]);
+            }
+        if (i < (max_num_children/2) + 1) {
+			printf("moniter thread : %d\n",i);
+            offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
+        }
+        }
+		__syncthreads();
+		updated_index +=*first_child_offset*4;
+		if (i == 0){
+		sub_idx[0]=updated_index;//sub_idx[0]=140
+        sub_size[i] = offests_incremental[0]*4; //0 being found_idx but a bit faster cause we hardcode i
+        } else {
+        sub_idx[i]=updated_index + offests_incremental[i - 1]*4;
+        sub_size[i] = (offests_incremental[i] - offests_incremental[i - 1])*4;
+		}
+		__syncthreads();
+		printf("begin threadIdx %d travel",i);
+		traversal_last_ngram<max_num_children,entries_per_node,max_ngram>(1, i, sub_idx[i],sub_size[i], btree_trie_mem, results);
+//	    traversal(fetch_btree_start[i], max_num_children, entries_per_node, max_ngram, btree_trie_mem, results);
+    }
+	__syncthreads();
+
 	
     //Write the correct result at the end
 	over:
