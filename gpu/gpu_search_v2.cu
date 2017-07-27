@@ -45,6 +45,7 @@ printf("This is thread %d's traversal for %d time \n",track, count);
             float *tmp_prob=(float *)&tmp;
             printf("traversal, thread is %d, loop is , prob is%f\n",track, i,*tmp_prob);
             printf("entries associated with above line%d,%d\n",i,fetch_entries[i]);
+			results[fetch_entries[i]]=*tmp_prob;
     }
 } else {
         int num_entries = entries_per_node;
@@ -56,6 +57,7 @@ printf("This is thread %d's traversal for %d time \n",track, count);
             printf("no last traversal thread is %d\n",track);
             printf("loop is ,%d, prob is %f\n",i,*tmp_prob);
             printf("entries associated with above line:%d\n",fetch_entries[i]);
+			results[fetch_entries[i]]=*tmp_prob;
 
             if (i < (max_num_children/2) + 1) {
                 offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
@@ -429,8 +431,8 @@ printf ("%d\n",keys_shared[4]);*/
 
 	printf("LgLMbegincurrent_ngramtest%d",current_ngram);//if it is already max_ngram I have to change the way to calculate num_entries and the way to get prob etc, but others should be the same because the last one is different from the previous (no children this is the ngram level not a Btree[eg:ngram A,B,C,D,E for E it has no children so it is different to get data for  E from C, but E still has so many vocabs can be])
 	unsigned int fetch_entries[entries_per_node+1];
-	float  score[entries_per_node + 1];
-unsigned int next_address[entries_per_node +1];
+//	float  score[entries_per_node + 1];
+//unsigned int next_address[entries_per_node +1];
 //printf ("key is %d\n",key);
 //printf ("%d\n",keys_shared[0]);
 //printf ("%d\n",keys_shared[1]);
@@ -463,6 +465,7 @@ if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to cha
 			float *tmp_prob=(float *)&tmp;
 			printf("testscore%d,%f\n",i,*tmp_prob);
 			printf("testentries%d,%d\n",i,fetch_entries[i]);
+			results[fetch_entries[i]]=*tmp_prob;
         }
     } else {
 	//	printf("test 7 is %d\n",*(unsigned int *)(&btree_trie_mem[updated_index + 7*sizeof(unsigned int)])); after test 7 is not the child of <s>
@@ -478,6 +481,7 @@ if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to cha
 				float *tmp_prob=(float *)&tmp;
 				printf("testscoreelae,%d,%f\n",i,*tmp_prob);
 	            printf("testentrieelse,%d\n",fetch_entries[i]);
+				results[fetch_entries[i]]=*tmp_prob;
 			//	printf("testaddresselse,%d\n",next_address[i]);
             }
         if (i < (max_num_children/2) + 1) {
@@ -512,11 +516,12 @@ if (key == 0&&current_ngram <max_ngram){//if it is =max_ngram then I have to cha
 		traversal<max_num_children,entries_per_node,max_ngram>(1, i, sub_idx[i],sub_size[i], btree_trie_mem, results);
 //	    traversal(fetch_btree_start[i], max_num_children, entries_per_node, max_ngram, btree_trie_mem, results);
     }
+	__syncthreads();
 	
     //Write the correct result at the end
     if (i == 0) {
         fn(accumulated_score); //This is basically either identity or exp, depending on what we need
-        results[blockIdx.x] = accumulated_score;
+        //results[blockIdx.x] = accumulated_score;
     }
 }
 

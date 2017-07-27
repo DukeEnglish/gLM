@@ -4,6 +4,7 @@
 #include "lm_impl.hh"
 #include <memory>
 #include <boost/tokenizer.hpp>
+#include <stdio.h>
 
  std::unique_ptr<float[]> sent2ResultsVector(std::string& sentence, LM& lm, unsigned char * btree_trie_gpu, unsigned int * first_lvl_gpu) {
     //tokenized
@@ -26,19 +27,20 @@
     unsigned int num_keys = queries.size()/lm.metadata.max_ngram_order; //Only way to get how
     unsigned int * gpuKeys = copyToGPUMemory(queries.data(), queries.size());
     float * results;
-    allocateGPUMem(num_keys, &results);
-	printf("voabIDs%d\n",vocabIDs[0]);
-	printf("queriesIDs%d\n",queries[0]);
-	printf("voabIDs%d\n",vocabIDs[2]);
-	printf("voabIDs%d\n",vocabIDs[3]);
+	unsigned int results_size = allvocabIDs.size()+1;
+	//printf("results_size is--------------------------------------------------- %d\n",results_size);
+    allocateGPUMem(results_size, &results);
     searchWrapper(btree_trie_gpu, first_lvl_gpu, gpuKeys, num_keys, results, lm.metadata.btree_node_size, lm.metadata.max_ngram_order);
 
     //Copy back to host
-    std::unique_ptr<float[]> results_cpu(new float[num_keys]);
-    copyToHostMemory(results, results_cpu.get(), num_keys);
+    std::unique_ptr<float[]> results_cpu(new float[results_size]);
+    copyToHostMemory(results, results_cpu.get(), results_size);
 
     freeGPUMemory(gpuKeys);
     freeGPUMemory(results);
+	for (int i =1;i<results_size;i++){
+		printf("results[%d]: %f\n",i,results_cpu[i]);
+	}	
 
     return results_cpu;
 }
