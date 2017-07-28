@@ -108,7 +108,7 @@ printf("This is thread %d's traversal for %d time \n",track, count);
         for (int i = 0; i < num_entries ; i++) {
 			fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
 			float tmp;
-            tmp =  *(float *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
+            tmp =  *(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int)+ i*(sizeof(float))]); //Skip the keys
             printf("traversal, thread is %d, loop is , prob is%f\n",track, i,tmp);
             printf("entries associated with above line%d,%d\n",i,fetch_entries[i]);
 			results[fetch_entries[i]]=tmp;
@@ -119,7 +119,7 @@ printf("This is thread %d's traversal for %d time \n",track, count);
            
             fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
             float tmp;
-            tmp =  *(float *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
+            tmp =  *(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int)+ i*(sizeof(float))]); //Skip the keys
             printf("no last traversal thread is %d\n",track);
             printf("loop is ,%d, prob is %f\n",i,tmp);
             printf("entries associated with above line:%d\n",fetch_entries[i]);
@@ -155,7 +155,7 @@ printf("This is thread %d's traversal for %d time \n",track, count);
 
 template<unsigned int max_num_children, unsigned int entries_per_node, unsigned int max_ngram, class Functor>
 __global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys, float * results, Functor fn) {
-
+printf("size of results%d\n",(sizeof(*results)));
     __shared__ unsigned int offsets[max_num_children/2 +1]; //Reads in the first child offset + the shorts
     __shared__ unsigned int entries_actual[entries_per_node + 1];
     __shared__ unsigned int found_idx;
@@ -595,8 +595,7 @@ if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){
         if (i < num_entries) {// all the three entries are found but the score is wrong
             fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
 			float tmp;
-            tmp =  *(float *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
-                                + i*(sizeof(float))]);
+            tmp =  *(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int)+ i*(sizeof(float))]); //Skip the keys
 			printf("testscore%d,%f\n",i,tmp);
 			printf("testentries%d,%d\n",i,fetch_entries[i]);
 			results[fetch_entries[i]]=tmp;
@@ -611,8 +610,7 @@ if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){
                 fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
 				
             //    next_address[i] = *(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 0*sizeof(unsigned int)]); 
-				tmp=*(float *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) //Skip the keys
-                                + i*(sizeof(float))]);
+				tmp=*(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int)+ i*(sizeof(float))]); //Skip the keys
 				printf("testscoreelae,%d,%f\n",i,tmp);
 	            printf("testentrieelse,%d\n",fetch_entries[i]);
 				results[fetch_entries[i]]=tmp;
