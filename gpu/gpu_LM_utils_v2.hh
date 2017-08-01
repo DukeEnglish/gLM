@@ -108,8 +108,6 @@ inline std::vector<unsigned int> allwords (LM &lm) {
 inline std::vector<unsigned int> vocabIDsent2queries(std::vector<unsigned int> vocabIDs, unsigned short ngram_order) {
     std::vector<unsigned int> ret;
     ret.reserve((vocabIDs.size() - 1)*ngram_order);
-    int front_idx = 0;
-    int back_idx = 1;
 	
 	for (int i = 0; i < (int)vocabIDs.size(); i++) {
             ret.push_back(vocabIDs[i]);
@@ -118,26 +116,6 @@ inline std::vector<unsigned int> vocabIDsent2queries(std::vector<unsigned int> v
         for (int i = 0; i < zeroes_to_pad; i++) {
             ret.push_back(0);
         }
-	/*
-    //In the ret vector put an ngram for every single entry
-    while (back_idx < (int)vocabIDs.size()) {
-        for (int i = back_idx; i >= front_idx; i--) {
-            ret.push_back(vocabIDs[back_idx-i]);
-        }
-        //Pad with zeroes if we don't have enough
-        int zeroes_to_pad = ngram_order - (back_idx - front_idx) - 1;
-        for (int i = 0; i < zeroes_to_pad; i++) {
-            ret.push_back(0);
-        }
-
-        //determine which ptr to advance
-        if ((back_idx - front_idx) < (ngram_order - 1)) {
-            back_idx++;
-        } else {
-            front_idx++;
-            back_idx++;
-        }
-    }*/
 
     return ret;
 }

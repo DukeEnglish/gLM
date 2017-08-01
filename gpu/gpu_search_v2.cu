@@ -543,20 +543,7 @@ if (key == 0 && current_ngram <max_ngram-1 && !get_backoff && btree_start!=0){//
 			printf("moniter thread : %d\n",i);
             offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
         }
-			//uint64_t sub_idx[num_entries];
-            //unsigned int sub_size[num_entries];
-/*
-            sub_idx[0]=updated_index + *first_child_offset*4;
-			printf("sub_idx[0] is %d\n",sub_idx[0]);
-            if (i == 0) {
-            sub_size[i] = offests_incremental[0]*4; //0 being found_idx but a bit faster cause we hardcode it
-            } else {
-            sub_idx[i]=sub_idx[0] + offests_incremental[i - 1]*4;
-            sub_size[i] = (offests_incremental[i] - offests_incremental[i - 1])*4;
-			printf("test sub_idx[%d] is %d, and associated offests_incremental[%d] is %d\n",i,sub_idx[i],i,offests_incremental[i]);
-            } */
-			
-        }
+	
 		__syncthreads();
 		updated_index +=*first_child_offset*4;
 		if (i == 0){
@@ -570,6 +557,7 @@ if (key == 0 && current_ngram <max_ngram-1 && !get_backoff && btree_start!=0){//
 		printf("begin threadIdx %d travel",i);
 		traversal<max_num_children,entries_per_node,max_ngram>(1, i, sub_idx[i],sub_size[i], btree_trie_mem, results);
 //	    traversal(fetch_btree_start[i], max_num_children, entries_per_node, max_ngram, btree_trie_mem, results);
+	}
     }
 	__syncthreads();
 	
@@ -620,7 +608,7 @@ if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){
 			printf("moniter thread : %d\n",i);
             offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
         }
-        }
+        
 		__syncthreads();
 		updated_index +=*first_child_offset*4;
 		if (i == 0){
@@ -635,6 +623,7 @@ if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){
 		traversal_last_ngram<max_num_children,entries_per_node,max_ngram>(1, i, sub_idx[i],sub_size[i], btree_trie_mem, results);
 //	    traversal(fetch_btree_start[i], max_num_children, entries_per_node, max_ngram, btree_trie_mem, results);
     }
+	}
 	__syncthreads();
 
 	
