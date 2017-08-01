@@ -343,7 +343,7 @@ BOOST_AUTO_TEST_CASE(micro_LM_test_serialization)  {
     freeGPUMemory(first_lvl_gpu);
 
 }
-
+/*
 BOOST_AUTO_TEST_CASE(micro_LM_test_normal_stream)  {
     LM lm;
     createTrie(ARPA_TESTFILEPATH, lm, 31); //Use a large amount of entries per node
@@ -409,5 +409,5 @@ BOOST_AUTO_TEST_CASE(micro_LM_test_normal_stream)  {
         << expected7[is_correct.second] << ", got: " << res_7[is_correct.second]);
 
 }
-
+*/
 BOOST_AUTO_TEST_SUITE_END()
