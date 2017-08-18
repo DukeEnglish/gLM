@@ -8,6 +8,13 @@ struct Entry_v2 {
     float backoff;
 };
 
+struct Entry_drawer{
+	unsigned int value;
+	std::string next_level;
+	std::string prob;
+	std::string backoff;
+};
+
 struct Entry {
     unsigned int value;
     B_tree * next_level;
@@ -23,6 +30,22 @@ struct Entry_offset {
     float prob;
     float backoff;
 };
+
+inline bool operator> (const Entry_drawer &left, const Entry_drawer &right) {
+    return (left.value > right.value);
+}
+
+inline bool operator< (const Entry_drawer &left, const Entry_drawer &right) {
+    return (left.value < right.value);
+}
+
+inline bool operator== (const Entry_drawer &left, const Entry_drawer &right) {
+    return (left.value == right.value);
+}
+
+inline bool operator!= (const Entry_drawer &left, const Entry_drawer &right) {
+    return (left.value != right.value);
+}
 
 inline bool operator> (const Entry &left, const Entry &right) {
     return (left.value > right.value);
@@ -57,8 +80,35 @@ inline bool operator!= (const unsigned int &left, const Entry &right) {
     return (left != right.value);
 }
 
+inline bool operator> (const unsigned int &left, const Entry_drawer &right) {
+    return (left > right.value);
+}
+inline bool operator< (const unsigned int &left, const Entry_drawer &right) {
+    return (left < right.value);
+}
+inline bool operator== (const unsigned int &left, const Entry_drawer &right) {
+    return (left == right.value);
+}
+inline bool operator!= (const unsigned int &left, const Entry_drawer &right) {
+    return (left != right.value);
+}
 //The other way, for convenience
 
+inline bool operator> (const Entry_drawer &left, const unsigned int &right) {
+    return (left.value > right);
+}
+
+inline bool operator< (const Entry_drawer &left, const unsigned int &right) {
+    return (left.value < right);
+}
+
+inline bool operator== (const Entry_drawer &left, const unsigned int &right) {
+    return (left.value == right);
+}
+
+inline bool operator!= (const Entry_drawer &left, const unsigned int &right) {
+    return (left.value != right);
+}
 inline bool operator> (const Entry &left, const unsigned int &right) {
     return (left.value > right);
 }

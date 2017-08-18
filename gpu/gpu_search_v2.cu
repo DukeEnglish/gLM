@@ -4,7 +4,7 @@
 
 #define big_entry 16
 #define small_entry 8
-
+////
 struct identity {
     __device__ void operator()(float& num) {
         return;
@@ -18,8 +18,8 @@ struct exponentify {
 };
 
 template<unsigned int max_num_children, unsigned int entries_per_node, unsigned int max_ngram>
-__device__ void traversal (int count, int track, uint64_t updated_index, unsigned int size, unsigned char * btree_trie_mem, float * results) {
-printf("This is thread %d's traversal for %d time \n",track, count);
+__device__ void traversal (unsigned int num_vocabs, int count, int track, uint64_t updated_index, unsigned int size, unsigned char * btree_trie_mem, float * results) {
+//printf("This is thread %d's traversal for %d time \n",track, count);
     count++;
     unsigned int offsets[max_num_children/2 +1];
     unsigned short * offests_incremental = (unsigned short *)&offsets[1];
@@ -35,7 +35,7 @@ printf("This is thread %d's traversal for %d time \n",track, count);
     
     if (is_last_lvl) {
         int num_entries = size/big_entry; 
-        printf("is_last_lvl: num_entries%d; track is %d\n",num_entries,track);
+       // printf("is_last_lvl: num_entries%d; track is %d\n",num_entries,track);
         for (int i = 0; i < num_entries ; i++) {
             fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);    
             //printf("testprob%f\n",*prob);
@@ -43,9 +43,9 @@ printf("This is thread %d's traversal for %d time \n",track, count);
             tmp=(*(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float))  + sizeof(unsigned int)])); 
 //*(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(float))]);          
             float *tmp_prob=(float *)&tmp;
-            printf("traversal, thread is %d, loop is , prob is%f\n",track, i,*tmp_prob);
-            printf("entries associated with above line%d,%d\n",i,fetch_entries[i]);
-			results[fetch_entries[i]]=*tmp_prob;
+  //          printf("traversal, thread is %d, loop is , prob is%f\n",track, i,*tmp_prob);
+    //        printf("entries associated with above line%d,%d\n",i,fetch_entries[i]);
+//			results[(blockIdx.x*num_vocabs)+fetch_entries[i]]=*tmp_prob;
     }
 } else {
         int num_entries = entries_per_node;
@@ -54,16 +54,16 @@ printf("This is thread %d's traversal for %d time \n",track, count);
             fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
             tmp=*(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 1*sizeof(unsigned int)]);
             float *tmp_prob=(float *)&tmp;
-            printf("no last traversal thread is %d\n",track);
-            printf("loop is ,%d, prob is %f\n",i,*tmp_prob);
-            printf("entries associated with above line:%d\n",fetch_entries[i]);
-			results[fetch_entries[i]]=*tmp_prob;
+      //      printf("no last traversal thread is %d\n",track);
+        //    printf("loop is ,%d, prob is %f\n",i,*tmp_prob);
+          //  printf("entries associated with above line:%d\n",fetch_entries[i]);
+//			results[(blockIdx.x*num_vocabs)+fetch_entries[i]]=*tmp_prob;
 
             if (i < (max_num_children/2) + 1) {
                 offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
 				unsigned int test = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + 1*sizeof(unsigned int)]);
-				printf("test %d\n",test);
-				printf("thread :%d - offsets[%d] is %d: \n",track, i, offsets[i]);
+			//	printf("test %d\n",test);
+			//	printf("thread :%d - offsets[%d] is %d: \n",track, i, offsets[i]);
             }
         }
         for(int i = 0; i < max_num_children ; i++) {
@@ -79,16 +79,16 @@ printf("This is thread %d's traversal for %d time \n",track, count);
             
             
             if (sub_size[i]!=0){
-			printf("also begin ith traversal. test sub_size[%d] is %d\n",i, sub_size[i]);
-            traversal<max_num_children, entries_per_node, max_ngram>(count, track, sub_idx[i],sub_size[i], btree_trie_mem, results);
+		//	printf("also begin ith traversal. test sub_size[%d] is %d\n",i, sub_size[i]);
+            traversal<max_num_children, entries_per_node, max_ngram>(num_vocabs, count, track, sub_idx[i],sub_size[i], btree_trie_mem, results);
             }
         }
     }
 }
 
 template<unsigned int max_num_children, unsigned int entries_per_node, unsigned int max_ngram>
-__device__ void traversal_last_ngram (int count, int track, uint64_t updated_index, unsigned int size, unsigned char * btree_trie_mem, float * results) {
-printf("This is thread %d's traversal for %d time \n",track, count);
+__device__ void traversal_last_ngram (unsigned int num_vocabs, int count, int track, uint64_t updated_index, unsigned int size, unsigned char * btree_trie_mem, float * results) {
+//printf("This is thread %d's traversal for %d time \n",track, count);
     count++;
     unsigned int offsets[max_num_children/2 +1];
     unsigned short * offests_incremental = (unsigned short *)&offsets[1];
@@ -104,14 +104,14 @@ printf("This is thread %d's traversal for %d time \n",track, count);
     
     if (is_last_lvl) {
         int num_entries = size/small_entry; 
-        printf("is_last_lvl: num_entries%d; track is %d\n",num_entries,track);
+  //      printf("is_last_lvl: num_entries%d; track is %d\n",num_entries,track);
         for (int i = 0; i < num_entries ; i++) {
 			fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
 			float tmp;
             tmp =  *(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int)+ i*(sizeof(float))]); //Skip the keys
-            printf("traversal, thread is %d, loop is , prob is%f\n",track, i,tmp);
-            printf("entries associated with above line%d,%d\n",i,fetch_entries[i]);
-			results[fetch_entries[i]]=tmp;
+    //        printf("traversal, thread is %d, loop is , prob is%f\n",track, i,tmp);
+      //      printf("entries associated with above line%d,%d\n",i,fetch_entries[i]);
+//			results[(blockIdx.x*num_vocabs)+fetch_entries[i]]=tmp;
     }
 } else {
         int num_entries = entries_per_node;
@@ -120,16 +120,16 @@ printf("This is thread %d's traversal for %d time \n",track, count);
             fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
             float tmp;
             tmp =  *(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int)+ i*(sizeof(float))]); //Skip the keys
-            printf("no last traversal thread is %d\n",track);
-            printf("loop is ,%d, prob is %f\n",i,tmp);
-            printf("entries associated with above line:%d\n",fetch_entries[i]);
-			results[fetch_entries[i]]=tmp;
+        //    printf("no last traversal thread is %d\n",track);
+          //  printf("loop is ,%d, prob is %f\n",i,tmp);
+            //printf("entries associated with above line:%d\n",fetch_entries[i]);
+//			results[(blockIdx.x*num_vocabs)+fetch_entries[i]]=tmp;
 
             if (i < (max_num_children/2) + 1) {
                 offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
 				unsigned int test = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + 1*sizeof(unsigned int)]);
-				printf("test %d\n",test);
-				printf("thread :%d - offsets[%d] is %d: \n",track, i, offsets[i]);
+			//	printf("test %d\n",test);
+			//	printf("thread :%d - offsets[%d] is %d: \n",track, i, offsets[i]);
             }
         }
         for(int i = 0; i < max_num_children ; i++) {
@@ -145,8 +145,8 @@ printf("This is thread %d's traversal for %d time \n",track, count);
             
             
             if (sub_size[i]!=0){
-			printf("also begin ith traversal. test sub_size[%d] is %d\n",i, sub_size[i]);
-            traversal<max_num_children, entries_per_node, max_ngram>(count, track, sub_idx[i],sub_size[i], btree_trie_mem, results);
+		//	printf("also begin ith traversal. test sub_size[%d] is %d\n",i, sub_size[i]);
+            traversal<max_num_children, entries_per_node, max_ngram>(num_vocabs, count, track, sub_idx[i],sub_size[i], btree_trie_mem, results);
             }
         }
     }
@@ -154,8 +154,8 @@ printf("This is thread %d's traversal for %d time \n",track, count);
 
 
 template<unsigned int max_num_children, unsigned int entries_per_node, unsigned int max_ngram, class Functor>
-__global__ void gpuSearchBtree(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys, float * results, Functor fn) {
-printf("size of results%d\n",(sizeof(*results)));
+__global__ void gpuSearchBtree(unsigned int num_vocabs, unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys, float * results, Functor fn) {
+//printf("size of results%d\n",(sizeof(*results)));
     __shared__ unsigned int offsets[max_num_children/2 +1]; //Reads in the first child offset + the shorts
     __shared__ unsigned int entries_actual[entries_per_node + 1];
     __shared__ unsigned int found_idx;
@@ -224,7 +224,7 @@ printf ("%d\n",keys_shared[4]);*/
             current_ngram = 1; //Set backoff in -1. If we run into this case again we need to do nothing
             key = keys_shared[current_ngram];
             get_backoff = true;
-			goto over;
+//			goto over;
         }
         __syncthreads(); //Needed!
         if (i < 3) {
@@ -284,7 +284,7 @@ printf ("%d\n",keys_shared[4]);*/
                 if (*is_last) {
                     //The number of entries in the bottom most nodes may be smaller than the size
                     num_entries = size/big_entry;
-					printf("heis152num_entries%d\n",num_entries);
+		//			printf("heis152num_entries%d\n",num_entries);
                     if (i < num_entries) {
                         entries[i] = *(unsigned int *)(&btree_trie_mem[updated_idx + i*sizeof(unsigned int)]);
                     }
@@ -298,8 +298,8 @@ printf ("%d\n",keys_shared[4]);*/
                     //Load the unsigned int start offset together with the accumulated offsets to avoid warp divergence
                     if (i < (max_num_children/2) + 1) {
                         offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_idx + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
-						printf("test <s> in ----------%d\n",offsets[i]);
-						printf("test why it run 5 times:thread%d,content: %d\n",i,offsets[i]);
+		//				printf("test <s> in ----------%d\n",offsets[i]);
+		//				printf("test why it run 5 times:thread%d,content: %d\n",i,offsets[i]);
                     }
                 }
                 __syncthreads();
@@ -368,10 +368,9 @@ printf ("%d\n",keys_shared[4]);*/
 
                     current_btree_start = current_btree_start + *next_level*4;
 					btree_start = current_btree_start;//+ *next_level*4;
-					printf("234current_btree_start%d\n",current_btree_start);
-					printf("235btree_start%d\n",btree_start);
-                    if (current_btree_start == btree_start){printf("testcurrent344%d,%d\n",btree_start,current_btree_start);
-}
+		//			printf("234current_btree_start%d\n",current_btree_start);
+		//			printf("235btree_start%d\n",btree_start);
+          //          if (current_btree_start == btree_start){printf("testcurrent344%d,%d\n",btree_start,current_btree_start);}
                     //Very rarely, mostly when having big datasets with small vocabulary
                     //we will have tries that don't go to the last level. In this case
                     //we just need to initiate backoff
@@ -420,7 +419,7 @@ printf ("%d\n",keys_shared[4]);*/
                 if (*is_last) {
                     //The number of entries in the bottom most nodes may be smaller than the size
                     num_entries = size/small_entry;
-                    printf("num_entries279%d\n",num_entries);
+            //        printf("num_entries279%d\n",num_entries);
 					if (i < num_entries) {
                         entries[i] = *(unsigned int *)(&btree_trie_mem[updated_idx + i*sizeof(unsigned int)]);
                     }
@@ -490,10 +489,13 @@ printf ("%d\n",keys_shared[4]);*/
         }
 
     } //key != 0
+	if(get_backoff == true){
+		goto over;
+	}
 
-	printf("not last ngram: %d\n",current_ngram);//if it is already max_ngram I have to change the way to calculate num_entries and the way to get prob etc, but others should be the same because the last one is different from the previous (no children this is the ngram level not a Btree[eg:ngram A,B,C,D,E for E it has no children so it is different to get data for  E from C, but E still has so many vocabs can be])
+//	printf("not last ngram: %d\n",current_ngram);//if it is already max_ngram I have to change the way to calculate num_entries and the way to get prob etc, but others should be the same because the last one is different from the previous (no children this is the ngram level not a Btree[eg:ngram A,B,C,D,E for E it has no children so it is different to get data for  E from C, but E still has so many vocabs can be])
 	unsigned int fetch_entries[entries_per_node+1];
-
+//goto over;
 if (key == 0 && current_ngram <max_ngram-1 && !get_backoff && btree_start!=0){//if it is =max_ngram then I have to change to a new way
 	uint64_t sub_idx[entries_per_node];
     unsigned int sub_size[entries_per_node];
@@ -518,14 +520,14 @@ if (key == 0 && current_ngram <max_ngram-1 && !get_backoff && btree_start!=0){//
             tmp=(*(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float))  + sizeof(unsigned int)])); 
 //*(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*(sizeof(float))]); 
 			float *tmp_prob=(float *)&tmp;
-			printf("testscore%d,%f\n",i,*tmp_prob);
-			printf("testentries%d,%d\n",i,fetch_entries[i]);
-			results[fetch_entries[i]]=*tmp_prob;
+//			printf("testscore%d,%f\n",i,*tmp_prob);
+//			printf("testentries%d,%d\n",i,fetch_entries[i]);
+//			results[(blockIdx.x*num_vocabs)+fetch_entries[i]]=*tmp_prob;
         }
     } else {
 	//	printf("test 7 is %d\n",*(unsigned int *)(&btree_trie_mem[updated_index + 7*sizeof(unsigned int)])); after test 7 is not the child of <s>
         num_entries = entries_per_node;
-		printf("begin the no last travel and num_entries is %d\n",num_entries);
+//		printf("begin the no last travel and num_entries is %d\n",num_entries);
          //Now load the entries
         if (i < num_entries) {
 				unsigned int tmp;
@@ -534,13 +536,13 @@ if (key == 0 && current_ngram <max_ngram-1 && !get_backoff && btree_start!=0){//
             //    next_address[i] = *(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 0*sizeof(unsigned int)]); 
 				tmp=*(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 1*sizeof(unsigned int)]);  
 				float *tmp_prob=(float *)&tmp;
-				printf("testscoreelae,%d,%f\n",i,*tmp_prob);
-	            printf("testentrieelse,%d\n",fetch_entries[i]);
-				results[fetch_entries[i]]=*tmp_prob;
+//				printf("testscoreelae,%d,%f\n",i,*tmp_prob);
+//	            printf("testentrieelse,%d\n",fetch_entries[i]);
+//				results[(blockIdx.x*num_vocabs)+fetch_entries[i]]=*tmp_prob;
 			//	printf("testaddresselse,%d\n",next_address[i]);
             }
         if (i < (max_num_children/2) + 1) {
-			printf("moniter thread : %d\n",i);
+//			printf("moniter thread : %d\n",i);
             offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
         }
 	
@@ -554,14 +556,14 @@ if (key == 0 && current_ngram <max_ngram-1 && !get_backoff && btree_start!=0){//
         sub_size[i] = (offests_incremental[i] - offests_incremental[i - 1])*4;
 		}
 		__syncthreads();
-		printf("begin threadIdx %d travel",i);
-		traversal<max_num_children,entries_per_node,max_ngram>(1, i, sub_idx[i],sub_size[i], btree_trie_mem, results);
+//		printf("begin threadIdx %d travel",i);
+		traversal<max_num_children,entries_per_node,max_ngram>(num_vocabs, 1, i, sub_idx[i],sub_size[i], btree_trie_mem, results);
 //	    traversal(fetch_btree_start[i], max_num_children, entries_per_node, max_ngram, btree_trie_mem, results);
 	}
     }
 	__syncthreads();
 	
-	printf("is last ngram: %d\n",current_ngram);
+//	printf("is last ngram: %d\n",current_ngram);
 if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){//if it is =max_ngram then I have to change to a new way
     uint64_t sub_idx[entries_per_node];
     unsigned int sub_size[entries_per_node];
@@ -584,14 +586,14 @@ if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){
             fetch_entries[i] = *(unsigned int *)(&btree_trie_mem[updated_index + i*sizeof(unsigned int)]);
 			float tmp;
             tmp =  *(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int)+ i*(sizeof(float))]); //Skip the keys
-			printf("testscore%d,%f\n",i,tmp);
-			printf("testentries%d,%d\n",i,fetch_entries[i]);
-			results[fetch_entries[i]]=tmp;
+//			printf("testscore%d,%f\n",i,tmp);
+//			printf("testentries%d,%d\n",i,fetch_entries[i]);
+//			results[(blockIdx.x*num_vocabs)+fetch_entries[i]]=tmp;
         }
     } else {
 	//	printf("test 7 is %d\n",*(unsigned int *)(&btree_trie_mem[updated_index + 7*sizeof(unsigned int)])); after test 7 is not the child of <s>
         num_entries = entries_per_node;
-		printf("begin the no last travel and num_entries is %d\n",num_entries);
+//		printf("begin the no last travel and num_entries is %d\n",num_entries);
          //Now load the entries
         if (i < num_entries) {
 				float tmp;
@@ -599,13 +601,13 @@ if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){
 				
             //    next_address[i] = *(unsigned int *)(&btree_trie_mem[updated_index + sizeof(unsigned int) + max_num_children*sizeof(unsigned short)  + num_entries*sizeof(unsigned int)  + i*(sizeof(unsigned int) + sizeof(float) + sizeof(float)) + 0*sizeof(unsigned int)]); 
 				tmp=*(float *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int)+ i*(sizeof(float))]); //Skip the keys
-				printf("testscoreelae,%d,%f\n",i,tmp);
-	            printf("testentrieelse,%d\n",fetch_entries[i]);
-				results[fetch_entries[i]]=tmp;
+//				printf("testscoreelae,%d,%f\n",i,tmp);
+//	            printf("testentrieelse,%d\n",fetch_entries[i]);
+//				results[(blockIdx.x*num_vocabs)+fetch_entries[i]]=tmp;
 			//	printf("testaddresselse,%d\n",next_address[i]);
             }
         if (i < (max_num_children/2) + 1) {
-			printf("moniter thread : %d\n",i);
+//			printf("moniter thread : %d\n",i);
             offsets[i] = *(unsigned int *)(&btree_trie_mem[updated_index + num_entries*sizeof(unsigned int) + i*sizeof(unsigned int)]);
         }
         
@@ -619,8 +621,8 @@ if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){
         sub_size[i] = (offests_incremental[i] - offests_incremental[i - 1])*4;
 		}
 		__syncthreads();
-		printf("begin threadIdx %d travel",i);
-		traversal_last_ngram<max_num_children,entries_per_node,max_ngram>(1, i, sub_idx[i],sub_size[i], btree_trie_mem, results);
+//		printf("begin threadIdx %d travel",i);
+		traversal_last_ngram<max_num_children,entries_per_node,max_ngram>(num_vocabs, 1, i, sub_idx[i],sub_size[i], btree_trie_mem, results);
 //	    traversal(fetch_btree_start[i], max_num_children, entries_per_node, max_ngram, btree_trie_mem, results);
     }
 	}
@@ -630,7 +632,7 @@ if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){
     //Write the correct result at the end
 	over:
     if (i == 0) {
-		printf("\nit'ss over\n");
+//		printf("\nit'ss over\n");
         fn(accumulated_score); //This is basically either identity or exp, depending on what we need
         //results[blockIdx.x] = accumulated_score;
     }
@@ -644,15 +646,15 @@ if (key == 0 && current_ngram == max_ngram-1 && !get_backoff && btree_start!=0){
     http://stackoverflow.com/questions/31569401/fastest-or-most-elegant-way-of-passing-constant-arguments-to-a-cuda-kernel?rq=1
     Instantiate templates for known things:
 */
-inline void kernelTemplateWrapper(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys,
+inline void kernelTemplateWrapper(unsigned int num_vocabs, unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys,
  unsigned int num_ngram_queries, float * results, unsigned int entries_per_node, unsigned int max_num_children,
   unsigned int max_ngram, cudaStream_t& stream, bool make_exp){
     if (max_ngram == 6) {
         if (entries_per_node == 31) {
             if (make_exp) {
-                gpuSearchBtree<32, 31, 6><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());
+                gpuSearchBtree<32, 31, 6><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());
             } else {
-                gpuSearchBtree<32, 31, 6><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());
+                gpuSearchBtree<32, 31, 6><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());
             }
         } else { 
             printf("No template argument for node size %d and number of ngrams %d. If you want to use this configuration add it in %s:%d.\n",
@@ -662,21 +664,21 @@ inline void kernelTemplateWrapper(unsigned char * btree_trie_mem, unsigned int *
     } else if (max_ngram == 5) {
         if (entries_per_node == 7) {
             if (make_exp) {
-                gpuSearchBtree<8, 7, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());
+                gpuSearchBtree<8, 7, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());
             } else {
-                gpuSearchBtree<8, 7, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());
+                gpuSearchBtree<8, 7, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());
             }
         } else if (entries_per_node == 31) {
             if (make_exp) {
-                gpuSearchBtree<32, 31, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());
+                gpuSearchBtree<32, 31, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());
             } else {
-                gpuSearchBtree<32, 31, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());
+                gpuSearchBtree<32, 31, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());
             }
         } else if (entries_per_node == 127) {
             if (make_exp) {
-                gpuSearchBtree<128, 127, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());    
+                gpuSearchBtree<128, 127, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());    
             } else {
-                gpuSearchBtree<128, 127, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());
+                gpuSearchBtree<128, 127, 5><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());
             }
         } else {
             printf("No template argument for node size %d and number of ngrams %d. If you want to use this configuration add it in %s:%d.\n",
@@ -686,21 +688,21 @@ inline void kernelTemplateWrapper(unsigned char * btree_trie_mem, unsigned int *
     } else if (max_ngram == 4) {
         if (entries_per_node == 7) {
             if (make_exp) {
-                gpuSearchBtree<8, 7, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());
+                gpuSearchBtree<8, 7, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());
             } else {
-                gpuSearchBtree<8, 7, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());
+                gpuSearchBtree<8, 7, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());
             }
         } else if (entries_per_node == 31) {
             if (make_exp) {
-                gpuSearchBtree<32, 31, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());
+                gpuSearchBtree<32, 31, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());
             } else {
-                gpuSearchBtree<32, 31, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());
+                gpuSearchBtree<32, 31, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());
             }
         } else if (entries_per_node == 127) {
             if (make_exp) {
-                gpuSearchBtree<128, 127, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());    
+                gpuSearchBtree<128, 127, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());    
             } else {
-                gpuSearchBtree<128, 127, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());
+                gpuSearchBtree<128, 127, 4><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());
             }
         } else {
             printf("No template argument for node size %d and number of ngrams %d. If you want to use this configuration add it in %s:%d.\n",
@@ -710,21 +712,21 @@ inline void kernelTemplateWrapper(unsigned char * btree_trie_mem, unsigned int *
     } else if ( max_ngram == 3) {
         if (entries_per_node == 7) {
             if (make_exp) {
-                gpuSearchBtree<8, 7, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());
+                gpuSearchBtree<8, 7, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());
             } else {
-                gpuSearchBtree<8, 7, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());
+                gpuSearchBtree<8, 7, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());
             }
         } else if (entries_per_node == 31) {
             if (make_exp) {
-                gpuSearchBtree<32, 31, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());
+                gpuSearchBtree<32, 31, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());
             } else {
-                gpuSearchBtree<32, 31, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());
+                gpuSearchBtree<32, 31, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());
             }
         } else if (entries_per_node == 127) {
             if (make_exp) {
-                gpuSearchBtree<128, 127, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, exponentify());    
+                gpuSearchBtree<128, 127, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, exponentify());    
             } else {
-                gpuSearchBtree<128, 127, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(btree_trie_mem, first_lvl, keys, results, identity());            
+                gpuSearchBtree<128, 127, 3><<<num_ngram_queries, max_num_children, 0, stream>>>(num_vocabs, btree_trie_mem, first_lvl, keys, results, identity());            
             }
         } else {
             printf("No template argument for node size %d and number of ngrams %d. If you want to use this configuration add it in %s:%d.\n",
@@ -738,16 +740,16 @@ inline void kernelTemplateWrapper(unsigned char * btree_trie_mem, unsigned int *
     }
 }
 
-inline void kernelTemplateWrapperDebug(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys,
+inline void kernelTemplateWrapperDebug(unsigned int num_vocabs, unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys,
  unsigned int num_ngram_queries, float * results, unsigned int entries_per_node, unsigned int max_num_children,
   unsigned int max_ngram, cudaStream_t& stream, cudaEvent_t &start, cudaEvent_t &stop, bool make_exp){
     cudaEventRecord(start);
-    kernelTemplateWrapper(btree_trie_mem, first_lvl,  keys, num_ngram_queries, results, entries_per_node, max_num_children, max_ngram, stream, make_exp);
+    kernelTemplateWrapper(num_vocabs, btree_trie_mem, first_lvl,  keys, num_ngram_queries, results, entries_per_node, max_num_children, max_ngram, stream, make_exp);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 }
 
-void searchWrapper(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys,
+void searchWrapper(unsigned int num_vocabs, unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys,
  unsigned int num_ngram_queries, float * results, unsigned int entries_per_node, unsigned int max_ngram, bool make_exp, bool debug) {
 
     unsigned int max_num_children = entries_per_node + 1;
@@ -760,7 +762,7 @@ void searchWrapper(unsigned char * btree_trie_mem, unsigned int * first_lvl, uns
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
 
-        kernelTemplateWrapperDebug(btree_trie_mem, first_lvl, keys, num_ngram_queries, results, entries_per_node,
+        kernelTemplateWrapperDebug(num_vocabs, btree_trie_mem, first_lvl, keys, num_ngram_queries, results, entries_per_node,
          max_num_children, max_ngram, stream, start, stop, make_exp);
 
         float milliseconds = 0;
@@ -768,11 +770,11 @@ void searchWrapper(unsigned char * btree_trie_mem, unsigned int * first_lvl, uns
         printf("Searched for %d ngrams in: %f milliseconds.\n", num_ngram_queries, milliseconds);
         printf("Throughput: %d queries per second.\n", (int)((num_ngram_queries/(milliseconds))*1000));
     } else {
-        kernelTemplateWrapper(btree_trie_mem, first_lvl, keys, num_ngram_queries, results, entries_per_node, max_num_children, max_ngram, stream, make_exp);
+        kernelTemplateWrapper(num_vocabs, btree_trie_mem, first_lvl, keys, num_ngram_queries, results, entries_per_node, max_num_children, max_ngram, stream, make_exp);
     }
     CHECK_CALL(cudaStreamDestroy(stream));
 }
-
+//temp
 void searchWrapperStream(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys,
  unsigned int num_ngram_queries, float * results, unsigned int entries_per_node, unsigned int max_ngram, cudaStream_t& stream, bool make_exp, bool debug) {
 
@@ -785,7 +787,7 @@ void searchWrapperStream(unsigned char * btree_trie_mem, unsigned int * first_lv
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
 
-        kernelTemplateWrapperDebug(btree_trie_mem, first_lvl, keys, num_ngram_queries, results, entries_per_node,
+        kernelTemplateWrapperDebug(1, btree_trie_mem, first_lvl, keys, num_ngram_queries, results, entries_per_node,
          max_num_children, max_ngram, stream, start, stop, make_exp);
 
         float milliseconds = 0;
@@ -793,7 +795,7 @@ void searchWrapperStream(unsigned char * btree_trie_mem, unsigned int * first_lv
         printf("Searched for %d ngrams in: %f milliseconds.\n", num_ngram_queries, milliseconds);
         printf("Throughput: %d queries per second.\n", (int)((num_ngram_queries/(milliseconds))*1000));
     } else {
-        kernelTemplateWrapper(btree_trie_mem, first_lvl, keys, num_ngram_queries, results, entries_per_node, max_num_children, max_ngram, stream, make_exp);
+        kernelTemplateWrapper(1,btree_trie_mem, first_lvl, keys, num_ngram_queries, results, entries_per_node, max_num_children, max_ngram, stream, make_exp);
     }
 }
 

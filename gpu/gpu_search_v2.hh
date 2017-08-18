@@ -4,7 +4,7 @@
 #include "lm.hh"
 
 //Wrapper to call on the gpu
-void searchWrapper(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys, unsigned int num_ngram_queries,
+void searchWrapper(unsigned int num_vocabs, unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys, unsigned int num_ngram_queries,
  float * results, unsigned int entries_per_node, unsigned int max_ngram, bool make_exp = false, bool debug = true);
 void searchWrapperStream(unsigned char * btree_trie_mem, unsigned int * first_lvl, unsigned int * keys,
  unsigned int num_ngram_queries, float * results, unsigned int entries_per_node, unsigned int max_ngram, cudaStream_t& stream, bool make_exp = false, bool debug = false);

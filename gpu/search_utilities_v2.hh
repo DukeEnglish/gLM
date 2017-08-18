@@ -54,7 +54,7 @@ void testGPUsearch(StringType arpafile, StringType pathTobinary) {
     float * results;
     allocateGPUMem(total_num_keys, &results);
 
-    searchWrapper(btree_trie_gpu, first_lvl_gpu, gpuKeys, total_num_keys, results, lm.metadata.btree_node_size, lm.metadata.max_ngram_order);
+    searchWrapper(0,btree_trie_gpu, first_lvl_gpu, gpuKeys, total_num_keys, results, lm.metadata.btree_node_size, lm.metadata.max_ngram_order);
 
     //Copy back to host
     float * results_cpu = new float[total_num_keys];

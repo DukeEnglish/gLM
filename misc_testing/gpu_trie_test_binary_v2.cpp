@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
         float * results;
         allocateGPUMem(num_keys, &results);
 
-        searchWrapper(btree_trie_gpu, first_lvl_gpu, gpuKeys, num_keys, results, lm.metadata.btree_node_size, lm.metadata.max_ngram_order);
+        searchWrapper(0,btree_trie_gpu, first_lvl_gpu, gpuKeys, num_keys, results, lm.metadata.btree_node_size, lm.metadata.max_ngram_order);
 
         //Copy back to host
         float * results_cpu = new float[num_keys];
