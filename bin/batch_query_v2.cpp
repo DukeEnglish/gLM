@@ -48,23 +48,29 @@ int main(int argc, char* argv[]){
 
     //Copy queries to GPU memory and allocate a results vector
     gpuPrepareStart = std::chrono::system_clock::now();
-
+	
     unsigned int num_keys = queries.size()/lm.metadata.max_ngram_order; //Get how many ngram queries we have to do
     unsigned int * gpuKeys = copyToGPUMemory(queries.data(), queries.size());
     float * results;
-    allocateGPUMem(num_keys, &results);
+
+
+	//Convert allwords into vocab IDs
+    std::vector<unsigned int> allvocabIDs = allwords(lm);
+	unsigned int results_size = (num_keys*allvocabIDs.size())+1;
+	allocateGPUMem(results_size, &results);
+    cudaMemset(results, 0, results_size*sizeof(float));
 
     gpuPrepareEnd = std::chrono::system_clock::now();
     std::cout << "Copying queries to gpu and other gpu work took: " << std::chrono::duration<double>(gpuPrepareEnd - gpuPrepareStart).count() << " seconds." << std::endl;
     
     //Now execute the search
-    searchWrapper(btree_trie_gpu, first_lvl_gpu, gpuKeys, num_keys, results, lm.metadata.btree_node_size, lm.metadata.max_ngram_order);
+    searchWrapper(allvocabIDs.size(), btree_trie_gpu, first_lvl_gpu, gpuKeys, num_keys, results, lm.metadata.btree_node_size, lm.metadata.max_ngram_order);
 
     //copy results back to CPU
     copyBackStart = std::chrono::system_clock::now();
 
-    std::unique_ptr<float[]> results_cpu(new float[num_keys]);
-    copyToHostMemory(results, results_cpu.get(), num_keys);
+    std::unique_ptr<float[]> results_cpu(new float[results_size]);
+    copyToHostMemory(results, results_cpu.get(), results_size);
 
     copyBackEnd = std::chrono::system_clock::now();
     std::cout << "Copying results to host took: " << std::chrono::duration<double>(copyBackEnd - copyBackStart).count() << " seconds." << std::endl;
@@ -84,8 +90,10 @@ int main(int argc, char* argv[]){
     //Print a sum of the total score of the file:
     double sum = 0;
     for (unsigned int i = 0; i < num_keys; i++) {
-        sum += results_cpu[i];
+//        sum += results_cpu[i];
+		sum += i;
     }
-    std::cout << "Total file sum is: " << sum << std::endl;
+   // std::cout << "Total file sum is: " << sum << std::endl;
+	std::cout << "The number of returns for all queries" << sum << std::endl;
     return 0;
 }
