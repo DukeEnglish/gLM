@@ -1,3 +1,4 @@
+# The name of this repository will not be changed until the end of this year because my dissertation is still being checked. I probably modify the code or any content anytime. If you have any question, please connect me at (ljyduke@gamil.com) without hesitate.
 # giLM 
 giLM is a the GPU language model based on gLM( More details about the design and implementation can be found in this [paper](http://aclweb.org/anthology/P/P16/P16-1183.pdf), published at ACL 2016.)
 giLM was designed for MODLMs
